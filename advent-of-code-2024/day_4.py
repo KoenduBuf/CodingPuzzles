@@ -45,5 +45,3 @@ def solve_part_2():
 submit_result_day(4, 1, solve_part_1)
 
 submit_result_day(4, 2, solve_part_2)
-
-# time_solve(solve_part_2)
