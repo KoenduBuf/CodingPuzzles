@@ -22,9 +22,15 @@ def read_input_day(day):
     return input_text
 
 
-def submit_result_day(day, part, result):
+def submit_result_day(day, part, result, allow_zero=False, allow_negative=False):
     if not str(result).isnumeric():
         print(f"Result for day {day}, part {part} is not numeric, skipping submission")
+        return
+    if not allow_zero and int(result) == 0:
+        print(f"Result for day {day}, part {part} is 0, skipping submission")
+        return
+    if not allow_negative and int(result) < 0:
+        print(f"Result for day {day}, part {part} is negative, skipping submission")
         return
     print(f"Submitting result day {day}, part {part}: {result}")
     # Submit result to AoC
