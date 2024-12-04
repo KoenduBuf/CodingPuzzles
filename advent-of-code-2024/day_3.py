@@ -1,14 +1,11 @@
-from aoc_general import read_input_day
+from aoc_general import *
 import re
 
 lines = read_input_day(3).split("\n")
 
-# Part 1:
-
 def solve(do_enables):
     total = 0
     enabled = True
-
 
     for ln in lines:
         groups = re.findall(r"mul\([0-9]{1,3},[0-9]{1,3}\)|don't\(\)|do\(\)", ln)
@@ -25,9 +22,6 @@ def solve(do_enables):
 
     return total
 
-print(solve(False))
-print(solve(True))
+submit_result_day(3, 1, solve(False))
 
-# import timeit
-
-# print(str(timeit.timeit("solve(False)", globals=globals(), number=10000) / 10000 * 1000) + "ms")
+submit_result_day(3, 2, solve(True))
