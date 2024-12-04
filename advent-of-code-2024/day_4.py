@@ -12,10 +12,10 @@ A = ord("A")
 S = ord("S")
 
 def count_masks(masks, for_values):
+    to_find = sum([ ord(c) * ord(c) for c in for_values ])
     total_count = 0
     for mask in masks:
         res = signal.convolve2d(matrix, mask, mode="valid")
-        to_find = sum([ ord(c) * ord(c) for c in for_values ])
         count = np.sum(res == to_find)
         total_count += count
     return total_count
@@ -42,6 +42,8 @@ def solve_part_2():
     ]
     return count_masks(part_2_x_mas_masks, "MMASS")
 
-submit_result_day(4, 1, solve_part_1())
+submit_result_day(4, 1, solve_part_1)
 
-submit_result_day(4, 2, solve_part_2())
+submit_result_day(4, 2, solve_part_2)
+
+# time_solve(solve_part_2)
