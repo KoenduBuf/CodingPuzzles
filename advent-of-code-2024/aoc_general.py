@@ -7,7 +7,7 @@ import re
 
 THIS_DIR = Path(__file__).parent
 SOLVED_FILE = THIS_DIR / "./solved.json"
-dotenv = dotenv_values("./.env")
+dotenv = dotenv_values(THIS_DIR / ".env")
 
 
 def read_input_day(day):
