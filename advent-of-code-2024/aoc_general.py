@@ -26,9 +26,12 @@ def read_input_day(day):
 
 def time_solve(func):
     import timeit
-    print("Timing solve function.... (100 runs)")
-    res = timeit.timeit(func, number=100) * 10
-    print(str(round(res, 2)) + " ms per solve")
+    print("Timing solve function....")
+    single_time = timeit.timeit(func, number=1)
+    do_runs = int(10 // single_time)
+    if do_runs > 0:
+        single_time = timeit.timeit(func, number=do_runs) / do_runs
+    print(f"{round(single_time * 1000, 2)} ms per solve ({max(do_runs, 1)} runs)")
 
 def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False):
     # If the answer is a function. Time it first
