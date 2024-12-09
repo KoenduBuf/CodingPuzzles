@@ -34,10 +34,7 @@ def time_solve(func):
     print(f"{round(single_time * 1000, 2)} ms per solve ({max(do_runs, 1)} runs)")
 
 def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False):
-    # If the answer is a function. Time it first
-    if callable(answer):
-        time_solve(answer)
-        answer = answer()
+    original_answer = answer
 
     # Check if answer is valid before submitting
     if not str(answer).isnumeric():
@@ -56,7 +53,11 @@ def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False)
     with open(SOLVED_FILE, "r") as fd:
         solved = json.load(fd)
     if solved_key in solved:
-        print("Already solved, skipping submission")
+        print("Already solved, skipping submission.")
+        # If the answer is a function. Time it
+        if callable(original_answer):
+            time_solve(answer)
+            answer = answer()
         return
 
     # Submit answer to AoC
