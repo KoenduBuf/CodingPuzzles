@@ -35,6 +35,7 @@ def time_solve(func):
 
 def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False):
     original_answer = answer
+    answer = answer() if callable(answer) else answer
 
     # Check if answer is valid before submitting
     if not str(answer).isnumeric():
@@ -75,6 +76,8 @@ def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False)
         print("Failed: Wrong answer")
     elif "Did you already complete it?" in response:
         print("Failed: Puzzle already completed")
+    elif "You gave an answer too recently" in response:
+        print("Failed: Answered too recently")
     else:
         print("Failed: Unknown error")
         print(response)
