@@ -39,9 +39,9 @@ def solve_part_2():
     return total_possible
 
 
-print(solve_part_2())
-
-# submit_result_day(7, 1, solve_part_1)
+submit_result_day(7, 1, solve_part_1)
 
 # submit_result_day(7, 2, solve_part_2())
+
+print(solve_part_2())
     

@@ -15,7 +15,7 @@ def read_start():
     lines[at_y] = lines[at_y][:at_x] + "." + lines[at_y][at_x + 1:]
     return lines, at_x, at_y, at_dir
 
-def walk(lines, at_x, at_y, at_dir):
+def walk(lines, at_x, at_y, at_dir) -> tuple[int, int, int] | None:
     next_x = at_x + DIRECTIONS[at_dir][0]
     next_y = at_y + DIRECTIONS[at_dir][1]
     if next_y < 0 or next_y >= len(lines) or next_x < 0 or next_x >= len(lines[next_y]):
@@ -24,6 +24,7 @@ def walk(lines, at_x, at_y, at_dir):
         return (next_x, next_y, at_dir)
     if lines[next_y][next_x] == "#":
         return (at_x, at_y, (at_dir + 1) % 4)
+    raise Exception("Should not reach here")
 
 def solve_part_1():
     lines, at_x, at_y, at_dir = read_start()
@@ -40,6 +41,7 @@ def solve_part_1():
 def solve_part_2():
     lines, start_x, start_y, start_dir = read_start()
     at_x, at_y, at_dir = start_x, start_y, start_dir
+    org_lines = lines.copy()
 
     def test_looping(lines, from_x, from_y, from_dir):
         # See if we end up in a loop
@@ -61,7 +63,7 @@ def solve_part_2():
             return False
         next_x, next_y, _ = w
         now_is = lines[next_y][next_x]
-        if now_is == "#":
+        if next_x == at_x and next_y == at_y:
             return False
         # If so, put a wall there, and check if we end up in a loop
         lines[next_y] = lines[next_y][:next_x] + "#" + lines[next_y][next_x + 1:]
@@ -71,6 +73,8 @@ def solve_part_2():
 
     obstruction_locs = set()
     while True:
+        if org_lines != lines:
+            raise Exception("Should not happen")
         # Check if we would end up in a loop if we put a wall in front of us
         obs = would_be_in_a_loop(lines, at_x, at_y, at_dir)
         if obs != False:
@@ -84,7 +88,7 @@ def solve_part_2():
         at_x, at_y, at_dir = w
         
 
-# submit_result_day(6, 1, solve_part_1)
+submit_result_day(6, 1, solve_part_1)
 
 # submit_result_day(6, 2, solve_part_2)
 

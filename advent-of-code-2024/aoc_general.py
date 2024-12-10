@@ -33,8 +33,10 @@ def time_solve(func):
         single_time = timeit.timeit(func, number=do_runs) / do_runs
     print(f"{round(single_time * 1000, 2)} ms per solve ({max(do_runs, 1)} runs)")
 
-def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False):
-    original_answer = answer
+def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False, time_solve=False):
+    if time_solve and callable(answer):
+        time_solve(answer)
+
     answer = answer() if callable(answer) else answer
 
     # Check if answer is valid before submitting
@@ -55,10 +57,7 @@ def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False)
         solved = json.load(fd)
     if solved_key in solved:
         print("Already solved, skipping submission.")
-        # If the answer is a function. Time it
-        if callable(original_answer):
-            time_solve(answer)
-            answer = answer()
+        print("Answer was " + ("correct" if solved[solved_key]["answer"] == answer else "incorrect"))
         return
 
     # Submit answer to AoC
