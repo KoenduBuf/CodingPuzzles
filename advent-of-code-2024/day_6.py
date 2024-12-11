@@ -80,7 +80,7 @@ def solve_part_2():
     if (start_x, start_y) in obstruction_locs:
         obstruction_locs.remove((start_x, start_y))
     return len(obstruction_locs)
-        
+
 
 submit_result_day(6, 1, solve_part_1)
 
