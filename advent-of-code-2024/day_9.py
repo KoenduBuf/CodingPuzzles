@@ -35,6 +35,11 @@ def move_compress_by_block(layout):
     
     return layout
 
+def display_alternating_with_id(alternating_with_id):
+    for id, size in alternating_with_id:
+        print(("." if id == -1 else str(id)) * size, end="")
+    print()
+
 def move_compress_by_whole_file(alternating):
     alternating_with_id = [ (-1 if i % 2 == 1 else i // 2, n) for i, n in enumerate(alternating) ]
     original = [ n for n in alternating_with_id ]
@@ -45,28 +50,34 @@ def move_compress_by_whole_file(alternating):
                 return i
         return -1
     
-    for f_pos in reversed(range(0, len(alternating_with_id), 2)):
-        id, size = alternating_with_id[f_pos]
-        if size == 0:
+    at_f_id = len(alternating_with_id) // 2
+    at_pos = at_f_id * 2
+    while at_pos > 0:
+        id, size = alternating_with_id[at_pos]
+        if size == 0 or id > at_f_id:
+            at_pos -= 2
             continue
         to = find_spot(size)
-        if to == -1 or to >= f_pos:
+        if to == -1 or to >= at_pos:
+            at_pos -= 2
+            at_f_id -= 1
             continue
         spot_size = alternating_with_id[to][1]
         
         size_free_at_f_pos = size
-        if f_pos > 0:
-            size_free_at_f_pos += alternating_with_id[f_pos-1][1]
-        if f_pos < len(alternating_with_id) - 1:
-            size_free_at_f_pos += alternating_with_id[f_pos+1][1]
+        size_free_at_f_pos += alternating_with_id[at_pos-1][1]
+        if at_pos < len(alternating_with_id) - 1:
+            size_free_at_f_pos += alternating_with_id[at_pos+1][1]
 
-        alternating_with_id[to+3:f_pos+1] = alternating_with_id[to+1:f_pos-1]
+        alternating_with_id[to+3:at_pos+1] = alternating_with_id[to+1:at_pos-1]
         alternating_with_id[to] = (-1, 0)
         alternating_with_id[to+1] = (id, size)
         alternating_with_id[to+2] = (-1, spot_size - size)
 
-        if f_pos < len(alternating_with_id) - 1:
-            alternating_with_id[f_pos+1] = (-1, size_free_at_f_pos)
+        if at_pos < len(alternating_with_id) - 1:
+            alternating_with_id[at_pos+1] = (-1, size_free_at_f_pos)
+        at_f_id -= 1
+        
     
     # total_disk_size_1 = sum([ n for n in alternating ])
     # total_disk_size_2 = sum([ n for i, n in alternating_with_id ])
@@ -109,11 +120,12 @@ def solve_part_2():
     return move_compress_by_whole_file([ e for e in disk_nums_alternating ])
 
 
+# print(solve_part_2())
+
 # submit_result_day(9, 1, solve_part_1)
 
-# submit_result_day(9, 2, solve_part_2)
+submit_result_day(9, 2, solve_part_2)
 
-print(solve_part_2())
 
 
 

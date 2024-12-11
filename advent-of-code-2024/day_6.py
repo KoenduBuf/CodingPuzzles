@@ -30,7 +30,6 @@ def solve_part_1():
     lines, at_x, at_y, at_dir = read_start()
     been_on_locs = set()
     been_on_locs.add((at_x, at_y))
-    
     while True:
         w = walk(lines, at_x, at_y, at_dir)
         if w is None:
@@ -88,7 +87,7 @@ def solve_part_2():
         at_x, at_y, at_dir = w
         
 
-submit_result_day(6, 1, solve_part_1)
+# submit_result_day(6, 1, solve_part_1)
 
 # submit_result_day(6, 2, solve_part_2)
 
