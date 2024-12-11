@@ -36,6 +36,7 @@ def solve_part_1():
             return len(been_on_locs)
         at_x, at_y, at_dir = w
         been_on_locs.add((at_x, at_y))
+    
 
 def solve_part_2():
     lines, start_x, start_y, start_dir = read_start()
@@ -55,40 +56,32 @@ def solve_part_2():
                 return True
         raise Exception("Should not reach here")
 
-    def would_be_in_a_loop(lines, at_x, at_y, at_dir):
-        # Check if we can put a wall there
+    def would_be_in_a_loop(lines, at_x, at_y):
+        now_is = lines[at_y][at_x]
+        lines[at_y] = lines[at_y][:at_x] + "#" + lines[at_y][at_x + 1:]
+        looping = test_looping(lines, start_x, start_y, start_dir)
+        lines[at_y] = lines[at_y][:at_x] + now_is + lines[at_y][at_x + 1:]
+        return looping
+
+    try_obstructions = []
+    while True:
         w = walk(lines, at_x, at_y, at_dir)
         if w is None:
-            return False
-        next_x, next_y, _ = w
-        now_is = lines[next_y][next_x]
-        if next_x == at_x and next_y == at_y:
-            return False
-        # If so, put a wall there, and check if we end up in a loop
-        lines[next_y] = lines[next_y][:next_x] + "#" + lines[next_y][next_x + 1:]
-        looping = test_looping(lines, at_x, at_y, at_dir)
-        lines[next_y] = lines[next_y][:next_x] + now_is + lines[next_y][next_x + 1:]
-        return (next_x, next_y) if looping else False
+            break
+        at_x, at_y, at_dir = w
+        try_obstructions.append((at_x, at_y, at_dir))
 
     obstruction_locs = set()
-    while True:
-        if org_lines != lines:
-            raise Exception("Should not happen")
-        # Check if we would end up in a loop if we put a wall in front of us
-        obs = would_be_in_a_loop(lines, at_x, at_y, at_dir)
-        if obs != False:
-            obstruction_locs.add(obs)
-        # Then walk as usual
-        w = walk(lines, at_x, at_y, at_dir)
-        if w is None:
-            if (start_x, start_y) in obstruction_locs:
-                obstruction_locs.remove((start_x, start_y))
-            return len(obstruction_locs)
-        at_x, at_y, at_dir = w
+    for obs in try_obstructions:
+        at_x, at_y, at_dir = obs
+        if would_be_in_a_loop(lines, at_x, at_y):
+            obstruction_locs.add((at_x, at_y))
+
+    if (start_x, start_y) in obstruction_locs:
+        obstruction_locs.remove((start_x, start_y))
+    return len(obstruction_locs)
         
 
-# submit_result_day(6, 1, solve_part_1)
+submit_result_day(6, 1, solve_part_1)
 
-# submit_result_day(6, 2, solve_part_2)
-
-print(solve_part_2())
+submit_result_day(6, 2, solve_part_2)

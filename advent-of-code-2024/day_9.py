@@ -90,18 +90,6 @@ def move_compress_by_whole_file(alternating):
             alternating_with_id[at_pos+1] = (-1, size_free_at_f_pos)
         at_f_id -= 1
 
-    # 6311837662089 <- correct
-    # 6311872499717
-
-    # display_alternating_with_id(alternating_with_id)
-    
-    # total_disk_size_1 = sum([ n for n in alternating ])
-    # total_disk_size_2 = sum([ n for i, n in alternating_with_id ])
-    # if total_disk_size_1 != total_disk_size_2:
-    #     print(original[:5], original[-5:], total_disk_size_1)
-    #     print(alternating_with_id[:5], alternating_with_id[-5:], total_disk_size_2)
-    #     raise Exception("Should have the same total disk size")
-
     # checksum
     total_checksum = 0
     at_pos = 0
