@@ -33,11 +33,11 @@ def time_solve(func):
         single_time = timeit.timeit(func, number=do_runs) / do_runs
     print(f"{round(single_time * 1000, 2)} ms per solve ({max(do_runs, 1)} runs)")
 
-def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False):
-    # If the answer is a function. Time it first
-    if callable(answer):
+def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False, time_solve=False):
+    if time_solve and callable(answer):
         time_solve(answer)
-        answer = answer()
+
+    answer = answer() if callable(answer) else answer
 
     # Check if answer is valid before submitting
     if not str(answer).isnumeric():
@@ -56,7 +56,8 @@ def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False)
     with open(SOLVED_FILE, "r") as fd:
         solved = json.load(fd)
     if solved_key in solved:
-        print("Already solved, skipping submission")
+        print("Already solved, skipping submission.")
+        print("Answer was " + ("correct" if solved[solved_key]["answer"] == answer else "incorrect"))
         return
 
     # Submit answer to AoC
@@ -74,6 +75,8 @@ def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False)
         print("Failed: Wrong answer")
     elif "Did you already complete it?" in response:
         print("Failed: Puzzle already completed")
+    elif "You gave an answer too recently" in response:
+        print("Failed: Answered too recently")
     else:
         print("Failed: Unknown error")
         print(response)
