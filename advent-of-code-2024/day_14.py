@@ -44,6 +44,27 @@ def amount_per_quadrant(after_time):
         quadrants[q] += 1
     return quadrants
 
+def for_each_position(robot_idx):
+    start_x, start_y = robots[robot_idx][0]
+    dx, dy = robots[robot_idx][1]
+    has_been = set()
+    for time in range(100):
+        x = (start_x + time * dx) % bathroom_size[0]
+        y = (start_y + time * dy) % bathroom_size[1]
+        if (x, y) in has_been:
+            break
+        has_been.add((x, y))
+        yield (x, y)
+
+def in_top_corners(x, y):
+    from_tl = x + y
+    if from_tl < (bathroom_size[0] - 1) // 2:
+        return True
+    from_tr = bathroom_size[0] - 1 - x + y
+    if from_tr < (bathroom_size[0] - 1) // 2:
+        return True
+    return False
+
 def solve_part_1():
     quadrants = amount_per_quadrant(100)
     return quadrants[0] * quadrants[1] * quadrants[2] * quadrants[3]
