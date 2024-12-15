@@ -3,11 +3,14 @@ from pathlib import Path
 import requests
 import time
 import json
+import sys
 import re
 
 THIS_DIR = Path(__file__).parent
 SOLVED_FILE = THIS_DIR / "./solved.json"
 dotenv = dotenv_values(THIS_DIR / ".env")
+
+sys.path.append(str(THIS_DIR.parent))
 
 
 def read_input_day(day):
