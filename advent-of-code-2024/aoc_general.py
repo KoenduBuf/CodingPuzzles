@@ -20,6 +20,7 @@ def read_input_day(day):
     req = requests.get(f"https://adventofcode.com/2024/day/{day}/input", cookies={ "session": dotenv["AOC_SESSION_COOKIE"] })
     input_text = re.sub(r"[\t ]+", " ", req.text.strip())
     # Cache input
+    input_cache_file.parent.mkdir(exist_ok=True)
     with open(input_cache_file, "w") as fd:
         fd.write(input_text)
     return input_text
