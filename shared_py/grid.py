@@ -1,3 +1,4 @@
+from queue import PriorityQueue
 
 DIRECTIONS_4 = [
     (0, -1),    # Up
@@ -49,3 +50,45 @@ class Grid:
     
     def find_all(self, value: any) -> list[tuple[int, int]]:
         return [ pos for pos in self if self[pos] == value ]
+    
+    def dijkstra(self, initial_state, goal, possible_moves_func):
+        # Goal will be a set of positions
+        if isinstance(goal, str):
+            goal = set(self.find_all(goal))
+        if isinstance(goal, tuple):
+            goal = set([ goal ])
+        if not isinstance(goal, set):
+            raise ValueError("Goal must be a set of positions")
+
+        # Setup for Dijkstra queue is (cost, state, previous_state)
+        state = initial_state
+        back_map = {}
+        queue = PriorityQueue()
+        queue.put((0, state, None))
+
+        while not queue.empty():
+            cost, state, prev_state = queue.get()
+
+            # Create backmap and check if we have already visited this state
+            if state in back_map:
+                if back_map[state][0] > cost:
+                    raise Exception("This should not happen")
+                if back_map[state][0] == cost:
+                    back_map[state][1].append(prev_state)
+                continue
+            back_map[state] = (cost, [])
+            if prev_state is not None:
+                back_map[state][1].append(prev_state)
+
+            # Check if we have reached the goal
+            if not isinstance(state, tuple):
+                raise ValueError("State must be a tuple")
+            if state in goal or isinstance(state[0], tuple) and state[0] in goal:
+                return cost, state, back_map
+            
+            # Add all possible moves to the queue
+            for new_cost, new_state in possible_moves_func(cost, state):
+                queue.put((new_cost, new_state, state))
+
+        return None
+    
