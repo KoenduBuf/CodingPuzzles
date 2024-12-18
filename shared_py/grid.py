@@ -19,8 +19,14 @@ def manhattan(pos1: tuple[int, int], pos2: tuple[int, int]) -> int:
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 class Grid:
-    def __init__(self, data: str):
-        self.grid = [ list(row) for row in data.split("\n") ]
+    def __init__(self, data: str, width: int = None, height: int = None):
+        if width is not None and height is not None:
+            # Initialize grid with a given size
+            fill_value = data if len(data) == 1 else None
+            self.grid = [ [ fill_value for _ in range(width) ] for _ in range(height) ]
+        else:
+            # Initialize grid with a string, height = lines, width = line length
+            self.grid = [ list(row) for row in data.split("\n") ]
 
     def __getitem__(self, pos: tuple[int, int]) -> any:
         return self.grid[pos[1]][pos[0]]
@@ -51,6 +57,36 @@ class Grid:
     def find_all(self, value: any) -> list[tuple[int, int]]:
         return [ pos for pos in self if self[pos] == value ]
     
+    def path(self, start, goal):
+        def possible_moves_func(cost, state):
+            x, y = state
+            for dx, dy in DIRECTIONS_4:
+                new_x, new_y = x + dx, y + dy
+                if (new_x, new_y) in self and self[(new_x, new_y)] != "#":
+                    yield cost + 1, (new_x, new_y)
+        # Start can be a position already or a char to find
+        if isinstance(start, str):
+            start = self.find(start)
+        if not isinstance(start, tuple):
+            raise ValueError("Start must be a tuple")
+        result = self.dijkstra(start, goal, possible_moves_func)
+        if result is None:
+            return None
+        cost, final_state, back_map = result
+        path_to_goal = self.reconstruct_path(back_map, final_state)
+        if len(path_to_goal) != cost + 1:
+            raise Exception("Somethings wrong here")
+        return path_to_goal
+
+    def reconstruct_path(self, back_map, final_state):
+        at_state = final_state
+        path = [ at_state ]
+        while at_state in back_map:
+            _, ways = back_map[at_state]
+            at_state = ways[0]
+            path.append(at_state)
+        return path[::-1]
+
     def dijkstra(self, initial_state, goal, possible_moves_func):
         # Goal will be a set of positions
         if isinstance(goal, str):
@@ -76,9 +112,8 @@ class Grid:
                 if back_map[state][0] == cost:
                     back_map[state][1].append(prev_state)
                 continue
-            back_map[state] = (cost, [])
             if prev_state is not None:
-                back_map[state][1].append(prev_state)
+                back_map[state] = (cost, [ prev_state ])
 
             # Check if we have reached the goal
             if not isinstance(state, tuple):
@@ -88,7 +123,8 @@ class Grid:
             
             # Add all possible moves to the queue
             for new_cost, new_state in possible_moves_func(cost, state):
-                queue.put((new_cost, new_state, state))
+                if new_state != initial_state:
+                    queue.put((new_cost, new_state, state))
 
         return None
     
