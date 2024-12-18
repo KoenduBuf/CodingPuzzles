@@ -37,20 +37,20 @@ def time_solve(func):
         single_time = timeit.timeit(func, number=do_runs) / do_runs
     print(f"{round(single_time * 1000, 2)} ms per solve ({max(do_runs, 1)} runs)")
 
-def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False, time_solve=False):
+def submit_result_day(day, part, answer, allow_zero=False, allow_negative=False, allow_non_numeric=False, time_solve=False):
     if time_solve and callable(answer):
         time_solve(answer)
 
     answer = answer() if callable(answer) else answer
 
     # Check if answer is valid before submitting
-    if not str(answer).isnumeric():
+    if not allow_non_numeric and not str(answer).isnumeric():
         print(f"Answer for day {day}, part {part} is not numeric, skipping submission")
         return
-    if not allow_zero and int(answer) == 0:
+    if not allow_non_numeric and not allow_zero and int(answer) == 0:
         print(f"Answer for day {day}, part {part} is 0, skipping submission")
         return
-    if not allow_negative and int(answer) < 0:
+    if not allow_non_numeric and not allow_negative and int(answer) < 0:
         print(f"Answer for day {day}, part {part} is negative, skipping submission")
         return
     print(f"Submitting answer day {day}, part {part}: {answer}")
