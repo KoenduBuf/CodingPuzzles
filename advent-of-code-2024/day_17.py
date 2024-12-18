@@ -164,18 +164,16 @@ def solve_part_2_assumptions():
 
     # Find the first number that gives the first right output.
     # Then freeze the right 3 bits, and find the next number that gives the next right output.
-    # To try is [ (frozen_number, correct_output_values)]
-    to_try = [ (0, 0) ]
+    # To try is [ (frozen_number, frozen_bits, correct_output_values)]
+    to_try = [ (0, 0, 0) ]
     in_try_queue = set()
     minimal_correct_answer = float('inf')
     while len(to_try) > 0:
-        frozen_a, correct_output_values = to_try.pop()
-        looking_for_partial = tuple(code[:correct_output_values + 1])
-        frozen_bits = correct_output_values * 3
+        frozen_num, frozen_bits, prev_correct_output_values = to_try.pop()
         
         for next_bits in range(0, 1 << 12):
-            new_a = frozen_a + (next_bits << frozen_bits)
-
+            new_a = frozen_num | (next_bits << frozen_bits)
+            
             if new_a > minimal_correct_answer:
                 continue
             
@@ -183,16 +181,25 @@ def solve_part_2_assumptions():
             try_machine.set_reg('A', new_a)
             try_machine.run_program(code)
 
-            if tuple([2, 4, 1, 3]) == tuple(try_machine.output_buffer) and new_a < minimal_correct_answer:
+            if looking_for_tuple == tuple(try_machine.output_buffer) and new_a < minimal_correct_answer:
                 print(f"Correct new minimal input value found: {new_a}")
                 minimal_correct_answer = new_a
 
-            if correct_output_values <= len(code) and tuple(try_machine.output_buffer[:correct_output_values+1]) == looking_for_partial:
-                new_frozen_num = new_a & ((1 << (frozen_bits + 3)) - 1)
-                try_tuple = (new_frozen_num, correct_output_values + 1)
+            correct_output_values = 0
+            for a, b in zip(try_machine.output_buffer, code):
+                if a != b:
+                    break
+                correct_output_values += 1
+            incorrect_follow_values = len(try_machine.output_buffer) - correct_output_values
+
+            if incorrect_follow_values <= 2 and correct_output_values >= prev_correct_output_values:
+                if frozen_bits >= 52:
+                    continue
+                new_frozen_num = new_a & ((1 << (frozen_bits + 1)) - 1)
+                try_tuple = (new_frozen_num, frozen_bits + 1, correct_output_values)
                 if try_tuple in in_try_queue:
                     continue
-                # print(f"Found {tuple(try_machine.output_buffer[:correct_output_values+1])} / {tuple(try_machine.output_buffer[correct_output_values+1:])}, with value {new_a}, frozen: {frozen_bits + 3} bits")
+                print(f"Found {tuple(try_machine.output_buffer[:correct_output_values])} / {tuple(try_machine.output_buffer[correct_output_values:])}, with value {new_a}, frozen: {frozen_bits + 1} bits")
                 to_try.append(try_tuple)
                 in_try_queue.add(try_tuple)
     
