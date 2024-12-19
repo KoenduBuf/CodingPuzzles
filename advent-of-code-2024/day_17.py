@@ -192,6 +192,9 @@ def solve_part_2_assumptions():
                 correct_output_values += 1
             incorrect_follow_values = len(try_machine.output_buffer) - correct_output_values
 
+            if correct_output_values * 3 + 6 < frozen_bits or frozen_bits > len(code) * 3:
+                continue
+
             if incorrect_follow_values <= 2 and correct_output_values >= prev_correct_output_values:
                 if frozen_bits >= 52:
                     continue
