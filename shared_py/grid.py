@@ -85,9 +85,24 @@ class Grid:
             _, ways = back_map[at_state]
             at_state = ways[0]
             path.append(at_state)
-        return path[::-1]
+        manual = path[::-1]
+        from_all = next(self.reconstruct_all_paths(back_map, final_state))
+        if manual != from_all:
+            raise Exception("Somethings wrong here")
+        return manual
 
-    def dijkstra(self, initial_state, goal, possible_moves_func):
+    def reconstruct_all_paths(self, back_map, final_state):
+        paths_back_stack = [ [ final_state ] ]
+        while len(paths_back_stack) > 0:
+            path_back = paths_back_stack.pop()
+            if path_back[-1] not in back_map:
+                yield path_back[::-1]
+                continue
+            _, ways = back_map[path_back[-1]]
+            for way in reversed(ways):
+                paths_back_stack.append(path_back + [ way ])
+
+    def dijkstra(self, initial_state, goal, possible_moves_func, longer_paths_too=False, show_progress=False):
         # Goal will be a set of positions
         if isinstance(goal, str):
             goal = set(self.find_all(goal))
@@ -101,9 +116,15 @@ class Grid:
         back_map = {}
         queue = PriorityQueue()
         queue.put((0, state, None))
+        earliest_solution = None
+        if show_progress:
+            show_dijkstra_preamble = " >> Running Dijkstra... "
+            print(show_dijkstra_preamble, end="")
 
         while not queue.empty():
             cost, state, prev_state = queue.get()
+            if show_progress and len(back_map.keys()) % 10_000 == 0:
+                print(f"\r{show_dijkstra_preamble} - Searched: {len(back_map.keys()):> 8} | Queued: {queue.qsize():> 8}", end="")
 
             # Create backmap and check if we have already visited this state
             if state in back_map:
@@ -119,12 +140,17 @@ class Grid:
             if not isinstance(state, tuple):
                 raise ValueError("State must be a tuple")
             if state in goal or isinstance(state[0], tuple) and state[0] in goal:
-                return cost, state, back_map
+                if earliest_solution is None:
+                    earliest_solution = (cost, state)
+                if not longer_paths_too:
+                    break
             
             # Add all possible moves to the queue
             for new_cost, new_state in possible_moves_func(cost, state):
                 if new_state != initial_state:
                     queue.put((new_cost, new_state, state))
 
-        return None
+        if show_progress:
+            print(f"{show_dijkstra_preamble} - Finished. Searched {len(back_map.keys())} states.")
+        return earliest_solution[0], earliest_solution[1], back_map
     
