@@ -164,45 +164,50 @@ def solve_part_2_assumptions():
 
     # Find the first number that gives the first right output.
     # Then freeze the right 3 bits, and find the next number that gives the next right output.
-    # To try is [ (frozen_number, frozen_bits, correct_output_values)]
+    # To try is [ (frozen_number, frozen_bits, correct_output_values) ]
+    FREEZE_BITS_PER_TIME = 3
+    REQUIRED_BITS_PER_OUTPUT = 3
+    MAX_BITS_EVER = REQUIRED_BITS_PER_OUTPUT * len(code)
     to_try = [ (0, 0, 0) ]
     in_try_queue = set()
     minimal_correct_answer = float('inf')
     while len(to_try) > 0:
         frozen_num, frozen_bits, prev_correct_output_values = to_try.pop()
         
-        for next_bits in range(0, 1 << 12):
+        for next_bits in range(0, 1 << (REQUIRED_BITS_PER_OUTPUT * 4)):
             new_a = frozen_num | (next_bits << frozen_bits)
-            
             if new_a > minimal_correct_answer:
                 continue
             
+            # Run the program with the new A value
             try_machine = machine.copy()
             try_machine.set_reg('A', new_a)
             try_machine.run_program(code)
 
-            if looking_for_tuple == tuple(try_machine.output_buffer) and new_a < minimal_correct_answer:
+            # Check if the output is exactly correct, store it if it is
+            if looking_for_tuple == tuple(try_machine.output_buffer):
                 print(f"Correct new minimal input value found: {new_a}")
                 minimal_correct_answer = new_a
+                continue
 
+            # See if we are even allowed to continue
+            if frozen_bits > MAX_BITS_EVER:
+                continue
+
+            # Check how many output values are correct & incorrect
             correct_output_values = 0
             for a, b in zip(try_machine.output_buffer, code):
                 if a != b:
                     break
                 correct_output_values += 1
-            incorrect_follow_values = len(try_machine.output_buffer) - correct_output_values
-
-            if correct_output_values * 3 + 6 < frozen_bits or frozen_bits > len(code) * 3:
-                continue
-
-            if incorrect_follow_values <= 2 and correct_output_values >= prev_correct_output_values:
-                if frozen_bits >= 52:
-                    continue
-                new_frozen_num = new_a & ((1 << (frozen_bits + 1)) - 1)
-                try_tuple = (new_frozen_num, frozen_bits + 1, correct_output_values)
+            
+            if correct_output_values > prev_correct_output_values:
+                new_frozen_bits = frozen_bits + FREEZE_BITS_PER_TIME
+                new_frozen_num = new_a & ((1 << new_frozen_bits) - 1)
+                try_tuple = (new_frozen_num, new_frozen_bits, correct_output_values)
                 if try_tuple in in_try_queue:
                     continue
-                print(f"Found {tuple(try_machine.output_buffer[:correct_output_values])} / {tuple(try_machine.output_buffer[correct_output_values:])}, with value {new_a}, frozen: {frozen_bits + 1} bits")
+                print(f"Found {tuple(try_machine.output_buffer[:correct_output_values])} / {tuple(try_machine.output_buffer[correct_output_values:])}, with value {new_a}, frozen: {new_frozen_bits} bits")
                 to_try.append(try_tuple)
                 in_try_queue.add(try_tuple)
     
@@ -241,26 +246,18 @@ def get_output_for_value(value):
 
 submit_result_day(17, 1, solve_part_1(), allow_non_numeric=True)
 
-# submit_result_day(17, 2, solve_part_2_assumptions())
-
-# print(get_output_for_value(149546378734122).get_output_str())
-
-print(solve_part_2_assumptions())
-
-# machine, code = read_setup()
-# n = 1059375
-# should_give_4 = (559 >> 3)
-# machine.set_reg('A', n + (should_give_4 << 21))
-# # machine.set_reg('A', )
-# machine.run_program(code)
-# print(machine.get_output_str())
+submit_result_day(17, 2, solve_part_2_assumptions())
 
 # Program given: 2,4,  1,1,  7,5,  1,4,  0,3,  4,5,  5,5,  3,0
-# B = A % 8
-# B = B ^ 1
-# C = A >> B
-# B = B ^ 4
+# B = A % 8                 # B = 0-7
+# B = B ^ 1                 # B = 0-7
+# C = A >> B                # Last 3 of C = 0-10 from the last of A.
+# B = B ^ 4                 # Last 3 of B, determined by last 3 of B
 # A = A >> 3
-# B = B ^ C
-# Output B % 8
+# B = B ^ C                 # Last 3 of B, determined by last 3 of B and C
+# Output B % 8              # Output last 3 of B
 # If A != 0, jump to 0
+
+# Conclusion:
+# Answer is '3 * len' bits
+# And output is based on next 10 bits of A
