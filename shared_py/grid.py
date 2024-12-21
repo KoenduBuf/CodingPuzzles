@@ -48,6 +48,12 @@ class Grid:
     def __contains__(self, pos: tuple[int, int]) -> bool:
         return 0 <= pos[1] < len(self.grid) and 0 <= pos[0] < len(self.grid[pos[1]])
 
+    def copy(self):
+        new_grid = Grid("", width=len(self.grid[0]), height=len(self.grid))
+        for pos in self:
+            new_grid[pos] = self[pos]
+        return new_grid
+
     def find(self, value: any) -> tuple[int, int]:
         for pos in self:
             if self[pos] == value:
