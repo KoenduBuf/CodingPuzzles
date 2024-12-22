@@ -1,4 +1,4 @@
-from queue import PriorityQueue
+from queue import Queue, PriorityQueue
 
 DIRECTIONS_4 = [
     (0, -1),    # Up
@@ -35,7 +35,13 @@ class Grid:
         self.grid[pos[1]][pos[0]] = value
 
     def __str__(self) -> str:
-        return "\n".join("".join(str(self[(x, y)]) for x in range(len(self.grid[y]))) for y in range(len(self.grid)))
+        return "\n".join(
+            "".join(
+                str(self[(x, y)] % 10) if isinstance(self[(x, y)], int) else self[(x, y)]
+                for x in range(len(self.grid[y]))
+            )
+            for y in range(len(self.grid))
+        )
 
     def __repr__(self) -> str:
         return str(self)
@@ -160,3 +166,21 @@ class Grid:
             print(f"{show_dijkstra_preamble} - Finished. Searched {len(back_map.keys())} states.")
         return earliest_solution[0], earliest_solution[1], back_map
     
+    def flood_fill_map(self, from_pos):
+        if isinstance(from_pos, str):
+            from_pos = self.find(from_pos)
+        filled_grid = self.copy()
+        filled_grid[from_pos] = 0
+        queue = Queue()
+        queue.put((0, from_pos))
+        while not queue.empty():
+            dist, pos = queue.get()
+            for new_dir in range(4):
+                new_pos = move(pos, new_dir)
+                if isinstance(filled_grid[new_pos], int):
+                    continue
+                if new_pos not in self or self[new_pos] == "#":
+                    continue
+                filled_grid[new_pos] = dist + 1
+                queue.put((dist + 1, new_pos))
+        return filled_grid
