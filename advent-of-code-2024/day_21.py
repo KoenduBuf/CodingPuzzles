@@ -12,6 +12,10 @@ class Keypad:
         from_x, from_y = self.position_dict[from_key]
         to_x, to_y = self.position_dict[to_key]
         return to_x - from_x, to_y - from_y
+    
+    def manhattan_distance(self, from_key, to_key):
+        dx, dy = self.to_key(from_key, to_key)
+        return abs(dx) + abs(dy)
 
     def to_key_moves(self, from_key, to_key, y_first) -> str:
         dx, dy = self.to_key(from_key, to_key)
@@ -47,6 +51,9 @@ class Keypad:
             ways_to_check = ways_to_this_key
         return ways_to_check
 
+    def fastest_way_to_press_all_keys(self, from_key: str, keys: str):
+        all_ways = self.all_ways_to_press_all_keys(from_key, keys)
+        return min(all_ways, key=lambda x: (len(x[1]), x[1]))[1]
 
 class KeypadChain:
     def __init__(self, keypad: Keypad | list[Keypad], child_chain: "KeypadChain"=None):
@@ -68,7 +75,11 @@ class KeypadChain:
             for this_way in self.keypad.all_ways_to_press_all_keys("A", child_moves):
                 all_ways_for_this_keypad.append(this_way)
         return all_ways_for_this_keypad
-        
+
+def get_complexitys(way_lenghts, codes_to_press):
+    numberic_parts = [ int(re.sub(r"[^0-9]", "", code)) for code in codes_to_press ]
+    complexitys = [ a * b for a, b, in zip(numberic_parts, way_lenghts) ]
+    return sum(complexitys)
 
 keypad_numbers = Keypad({
     "A": ( 0, 0),
@@ -96,38 +107,130 @@ keypad_arrows = Keypad({
 from aoc_general import *
 
 
-def get_keypad_chain(n_robots):
-    return KeypadChain(
-        [ keypad_arrows for _ in range(n_robots) ] +
-        [ keypad_numbers ]
-    )
+# Part 1:
 
-def get_complexitys(keypad_chain, codes_to_press):
+def get_way_lengths_try_all(keypad_chain: KeypadChain, codes_to_press):
     final_ways_lenghts = []
     for code in codes_to_press:
         ways = keypad_chain.all_ways_to_press_final_keypad(code)
         ways_lengths = [ len(moves) for _, moves in ways ]
         final_ways_lenghts.append(min(ways_lengths))
-    numberic_parts = [ int(re.sub(r"[^0-9]", "", code)) for code in codes_to_press ]
-    complexitys = [ a * b for a, b, in zip(numberic_parts, final_ways_lenghts) ]
-    return sum(complexitys)
+    return final_ways_lenghts
 
 def solve_part_1():
-    keypad_chain = get_keypad_chain(2)
+    keypad_chain = KeypadChain(
+        [ keypad_arrows for _ in range(2) ] +
+        [ keypad_numbers ]
+    )
     codes_to_press = read_input_day(21).split("\n")
-    return get_complexitys(keypad_chain, codes_to_press)
+    way_lengths = get_way_lengths_try_all(keypad_chain, codes_to_press)
+    return get_complexitys(way_lengths, codes_to_press)
 
-def solve_part_2():
-    # keypad_chain = get_keypad_chain(25)
-    codes_to_press = [ "029A" ] # read_input_day(21).split("\n")
-    # return get_complexitys(keypad_chain, [ "029A" ])
+# Part 2, lookup table:
 
-    for code in codes_to_press:
-        bottom_robot_directions_press = keypad_arrows.all_ways_to_press_all_keys("A", code)
+get_a_parts = lambda moves: [ m + "A" for m in moves.split("A")[:-1] ]
+
+def get_all_possible_moves_with_a(depth=5):
+    # All possible combinations of moves you could do before pressing A on an arrow keypad
+    all_single_moves = [ "<", ">", "^", "v", "" ]
+    def get_all_moves_of_length(n) -> list[str]:
+        if n == 1:
+            return all_single_moves
+        return [ 
+            move + way
+            for way in get_all_moves_of_length(n - 1)
+            for move in all_single_moves
+        ]
+    return [ mvs + "A" for mvs in get_all_moves_of_length(depth) ]
+
+def build_length_lookup_table_bottom_up(for_depth):
+    first_table, second_table = for_depth // 2 - 1, for_depth - 1 - for_depth // 2
+    all_unique_moves_with_a = get_all_possible_moves_with_a()
+    
+    # For each of those, find the shortest way to do that move and then press A
+    moves_1_depth_lookup = {
+        move: keypad_arrows.fastest_way_to_press_all_keys("A", move)
+        for move in all_unique_moves_with_a
+    }
+
+    # From now on, moves consists of moves between multiple A's, like xxxAxxAxxxxAxxAAxA
+    # So we need to check the shortest way doing all of those parts between the As
+    def fastest_way_for_all_parts(moves):
+        return "".join(moves_1_depth_lookup[part] for part in get_a_parts(moves))
+
+    # Now we can make a lookup table for lets say depth 13
+    lookup_tables = [ moves_1_depth_lookup ]
+    for i in range(1, second_table + 1):
+        print("Making lookup table for depth", i)
+        previous_table = lookup_tables[i - 1]
+        depth_i_table = {
+            move: fastest_way_for_all_parts(previous_table[move])
+            for move in all_unique_moves_with_a
+        }
+        lookup_tables.append(depth_i_table)
+
+    # Then we can make a lookup table of the length for depth 25 by going over the one
+    # for depth 12 and for each move looking up the length in depth 13
+    def total_length_to_move_all_parts(moves, with_table):
+        return sum(len(with_table[part]) for part in get_a_parts(moves))
+    
+    depth_25_lengths = {
+        move: total_length_to_move_all_parts(
+            lookup_tables[first_table][move],
+            lookup_tables[second_table]
+        )
+        for move in all_unique_moves_with_a
+    }
+    return depth_25_lengths
+
+# Part 2, top down:
+
+def build_length_lookup_table_top_down(for_depth):
+    # New idea.
+    all_unique_moves_with_a = get_all_possible_moves_with_a()
+
+    # Lets start at robot 25. For each possible move of robot 24, how long does it take?
+    takes_time_for_24 = {
+        move: len(keypad_arrows.fastest_way_to_press_all_keys("A", move))
+        for move in all_unique_moves_with_a
+    }
+
+    # When we know that, then how long for robot 23? Etc
+    previous_takes_time_dict = takes_time_for_24
+    for _ in range(for_depth - 1):
+        takes_time_for_this_robot = {}
+
+        for move in all_unique_moves_with_a:
+            best_takes_time = float("inf")
+            for _, way in keypad_arrows.all_ways_to_press_all_keys("A", move):
+                way_takes = sum([ previous_takes_time_dict[part] for part in get_a_parts(way) ])
+                if way_takes < best_takes_time:
+                    best_takes_time = way_takes
+            takes_time_for_this_robot[move] = best_takes_time
         
+        previous_takes_time_dict = takes_time_for_this_robot
+    
+    return takes_time_for_this_robot
+
+def solve_part_2_lookup_table(lookup_lengths_table):
+    codes_to_press = read_input_day(21).split("\n")
+
+    # Then lets do it on the actual code
+    best_way_lengths = []
+    for code in codes_to_press:
+        first_bot_ways = keypad_numbers.all_ways_to_press_all_keys("A", code)
+        best_way = float("inf")
+        for _, arrow_ways in first_bot_ways:
+            # For each way the first bot can do it, calculate the length N deep
+            parts = get_a_parts(arrow_ways)
+            parts_lengths = [ lookup_lengths_table[part] for part in parts ]
+            if sum(parts_lengths) < best_way:
+                best_way = sum(parts_lengths)
+        best_way_lengths.append(best_way)
+    
+    return get_complexitys(best_way_lengths, codes_to_press)
+
 
 submit_result_day(21, 1, solve_part_1())
 
-# submit_result_day(21, 2, solve_part_2())
-
-print(solve_part_2())
+submit_result_day(21, 2, solve_part_2_lookup_table(build_length_lookup_table_top_down(25)))
