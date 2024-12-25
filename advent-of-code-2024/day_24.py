@@ -15,6 +15,12 @@ class Gate:
         input_values = [wire_values[input] for input in self.inputs]
         return self.perform(*input_values)
     
+    def __str__(self):
+        return f"{type(self).__name__}({self.inputs}) -> {self.output}"
+    
+    def __repr__(self):
+        return str(self)
+    
     def perform(self, *input_values):
         raise NotImplementedError()
 
@@ -97,49 +103,129 @@ def solve_part_1():
 
 # Part 2:
 
+class Gates:
+    def __init__(self):
+        self.gates_list: list[Gate] = read_input().gates
+        self.calculate_lookup_dicts()
+
+    def calculate_lookup_dicts(self):
+        gates_by_output = { gate.output: gate for gate in self.gates_list }
+        gates_by_input = {}
+        for gate in self.gates_list:
+            for input in gate.inputs:
+                gates_by_input.setdefault(input, []).append(gate)
+        self.gates_by_output, self.gates_by_input = gates_by_output, gates_by_input
+    
+    def get_common_gates_with_inputs(self, with_inputs):
+        common_gates = []
+        for gate in self.gates_list:
+            if all(input in with_inputs for input in gate.inputs):
+                common_gates.append(gate)
+        return sorted(common_gates, key=lambda g: type(g).__name__)
+    
+    def perform_swap(self, wire_a, wire_b):
+        print(f"SWAPPING {wire_a} and {wire_b}")
+        gate_a = self.gates_by_output[wire_a]
+        gate_b = self.gates_by_output[wire_b]
+        gate_a.output = wire_b
+        gate_b.output = wire_a
+        # for in_a in self.gates_by_input[wire_a]:
+        #     in_a.inputs[in_a.inputs.index(wire_a)] = wire_b
+        # for in_b in self.gates_by_input[wire_b]:
+        #     in_b.inputs[in_b.inputs.index(wire_b)] = wire_a
+        self.calculate_lookup_dicts()
+
+    def __iter__(self):
+        return iter(self.gates_list)
+
 def solve_part_2():
     # I am gonna assume they all need to make half/full adders
-    gates = read_input().gates
-
-    # Easy lookup dicts
-    gates_by_output = { gate.output: gate for gate in gates }
-    gates_by_input = {}
-    for gate in gates:
-        for input in gate.inputs:
-            gates_by_input.setdefault(input, []).append(gate)
-
-    z_gates = sorted([ g for g in gates if g[0] == "z" ], key=lambda x: int(x.output[1:]))
-    
-
-    # Helper functions
-    def get_common_gates_with_inputs(with_inputs):
-        gates = []
-        for gate in gates:
-            if all(input in with_inputs for input in gate.inputs):
-                gates.append(gate)
-        return gates
-
+    gates = Gates()
     
     # We are gonna track all gates that possibly need to change
     wires_to_change = set()
 
-    # First, check that all z gates are xors, except the last one
-    for z_gate in z_gates[:-1]:
-        if not isinstance(z_gate, XorGate):
-            print("Nope Found, not xor:", z_gate.output)
-            wires_to_change.add(z_gate.output)
-    
-    # Also check that all 2 inputs go into an xor and an and together
-    # for x_0, y_0 in zip(x_gates, y_gates):
-        
+    # Helper functions
+    def assert_or_change(cond, wire):
+        if cond: return
+        print(f"Changing {wire}")
+        wires_to_change.add(wire)
+
+    def assert_or_exception(cond, msg):
+        if not cond: raise Exception(msg)
+
+    # Get all z gates, and all x and y wires
+    sort_wires = lambda x: sorted(x, key=lambda x: int(x.output[1:]) if isinstance(x, Gate) else int(x[1:]))
+    z_gates = sort_wires([ g for g in gates if g.output[0] == "z" ])
+    x_wires = sort_wires(list(set([ inp for g in gates for inp in g.inputs if inp[0] == "x" ])))
+    y_wires = sort_wires(list(set([ inp for g in gates for inp in g.inputs if inp[0] == "y" ])))
+    assert_or_exception(len(x_wires) == len(y_wires), "Not the same amount of x and y wires")
 
 
     # First, check that x00 and y00 make a half adder
-    # if not all(xy in z_gate[0].inputs for xy in ["x00", "y00"]):
-    #     wires_to_change.add("z00")
-    # z00carry = gates_by_input["x00"]
+    gates_from_00 = gates.get_common_gates_with_inputs(["x00", "y00"])
+    assert_or_exception(len(gates_from_00) == 2, "x00 and y00 should have 2 gates")
+    assert_or_exception(isinstance(gates_from_00[0], AndGate), "x00 and y00 should have an and")
+    assert_or_exception(isinstance(gates_from_00[1], XorGate), "y00 and y00 should have an xor")
+
+    assert_or_change(gates_from_00[1].output == "z00", "z00 should be the output of the first xor")
+    carry_00 = gates_from_00[0].output
+    previous_carry = carry_00
+
+    # Then we go over all the full adders
+    for x_wire, y_wire in zip(x_wires[1:], y_wires[1:]):
+        this_z_wire = f"z{x_wire[1:]}"
+        print(f"Checking full adder from {x_wire}, {y_wire}, {previous_carry} -> {this_z_wire}")
+        common_gates = gates.get_common_gates_with_inputs([x_wire, y_wire])
+
+        # We assume the full adder design uses 2 half adders in the common way (please dont make me reget this)
+        assert_or_exception(len(common_gates) == 2, "any x and y should have 2 gates")
+        assert_or_exception(isinstance(common_gates[0], AndGate), "any x and y should have an and")
+        assert_or_exception(isinstance(common_gates[1], XorGate), "any x and y should have an xor")
+
+        a_and_y = common_gates[0].output
+        a_xor_y = common_gates[1].output
+
+        # After the xor there should be another xor with the carry
+        gates_after_xor = gates.get_common_gates_with_inputs([a_xor_y, previous_carry])
+        if len(gates_after_xor) != 2:
+            a = gates.gates_by_input[a_xor_y]
+            b = gates.gates_by_input[previous_carry]
+
+            if len(b) == 2:
+                not_carry_wires = [ inp for g in b for inp in g.inputs if inp != previous_carry ]
+                unique_wire = list(set(not_carry_wires))
+                assert_or_exception(len(unique_wire) == 1, "There should be only one unique wire")
+                gates.perform_swap(previous_carry, unique_wire[0])
+                a_xor_y = unique_wire[0]
+                gates_after_xor = gates.get_common_gates_with_inputs([a_xor_y, previous_carry])
+
+        assert_or_exception(len(gates_after_xor) == 2, "After xor there should be 2 gates")
+        assert_or_exception(isinstance(gates_after_xor[0], AndGate), "After xor there should be an and")
+        assert_or_exception(isinstance(gates_after_xor[1], XorGate), "After xor there should be an xor")
+        
+        assert_or_change(gates_after_xor[1].output == this_z_wire, f"The output of the xor should be {this_z_wire}")
+
+        and_gate_after_xor = gates_after_xor[0]
+        after_ands = gates.get_common_gates_with_inputs([a_and_y, and_gate_after_xor.output])
+        if len(after_ands) != 1:
+            a = gates.gates_by_input[a_and_y]
+            b = gates.gates_by_input[gates_after_xor[0].output]
+            print(a, b, after_ands)
+        assert_or_exception(len(after_ands) == 1, "After the ands there should be 1 gate")
+        assert_or_exception(isinstance(after_ands[0], OrGate), "After the ands there should be an or")
+
+        previous_carry = after_ands[0].output
+
+    
+        
+
+
+    
 
 
 
-submit_result_day(24, 1, solve_part_1())
+# submit_result_day(24, 1, solve_part_1())
+
+print(solve_part_2())
 
