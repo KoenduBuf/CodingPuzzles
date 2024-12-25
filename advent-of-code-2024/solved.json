@@ -158,5 +158,13 @@
     "day_23_part_2": {
         "time": "2024-12-23 09:56:19",
         "answer": "az,cj,kp,lm,lt,nj,rf,rx,sn,ty,ui,wp,zo"
+    },
+    "day_24_part_1": {
+        "time": "2024-12-24 10:13:22",
+        "answer": 57632654722854
+    },
+    "day_25_part_1": {
+        "time": "2024-12-25 10:47:32",
+        "answer": 3264
     }
 }
