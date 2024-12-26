@@ -107,6 +107,7 @@ class Gates:
     def __init__(self):
         self.gates_list: list[Gate] = read_input().gates
         self.calculate_lookup_dicts()
+        self.did_swaps = []
 
     def calculate_lookup_dicts(self):
         gates_by_output = { gate.output: gate for gate in self.gates_list }
@@ -125,14 +126,11 @@ class Gates:
     
     def perform_swap(self, wire_a, wire_b):
         print(f"SWAPPING {wire_a} and {wire_b}")
+        self.did_swaps.append((wire_a, wire_b))
         gate_a = self.gates_by_output[wire_a]
         gate_b = self.gates_by_output[wire_b]
         gate_a.output = wire_b
         gate_b.output = wire_a
-        # for in_a in self.gates_by_input[wire_a]:
-        #     in_a.inputs[in_a.inputs.index(wire_a)] = wire_b
-        # for in_b in self.gates_by_input[wire_b]:
-        #     in_b.inputs[in_b.inputs.index(wire_b)] = wire_a
         self.calculate_lookup_dicts()
 
     def __iter__(self):
@@ -142,15 +140,7 @@ def solve_part_2():
     # I am gonna assume they all need to make half/full adders
     gates = Gates()
     
-    # We are gonna track all gates that possibly need to change
-    wires_to_change = set()
-
     # Helper functions
-    def assert_or_change(cond, wire):
-        if cond: return
-        print(f"Changing {wire}")
-        wires_to_change.add(wire)
-
     def assert_or_exception(cond, msg):
         if not cond: raise Exception(msg)
 
@@ -168,7 +158,7 @@ def solve_part_2():
     assert_or_exception(isinstance(gates_from_00[0], AndGate), "x00 and y00 should have an and")
     assert_or_exception(isinstance(gates_from_00[1], XorGate), "y00 and y00 should have an xor")
 
-    assert_or_change(gates_from_00[1].output == "z00", "z00 should be the output of the first xor")
+    assert_or_exception(gates_from_00[1].output == "z00", "z00 should be the output of the first xor")
     carry_00 = gates_from_00[0].output
     previous_carry = carry_00
 
@@ -183,49 +173,46 @@ def solve_part_2():
         assert_or_exception(isinstance(common_gates[0], AndGate), "any x and y should have an and")
         assert_or_exception(isinstance(common_gates[1], XorGate), "any x and y should have an xor")
 
-        a_and_y = common_gates[0].output
-        a_xor_y = common_gates[1].output
+        x_xor_y = common_gates[1].output
 
         # After the xor there should be another xor with the carry
-        gates_after_xor = gates.get_common_gates_with_inputs([a_xor_y, previous_carry])
+        gates_after_xor = gates.get_common_gates_with_inputs([x_xor_y, previous_carry])
         if len(gates_after_xor) != 2:
-            a = gates.gates_by_input[a_xor_y]
+            a = gates.gates_by_input[x_xor_y]
             b = gates.gates_by_input[previous_carry]
-
             if len(b) == 2:
-                not_carry_wires = [ inp for g in b for inp in g.inputs if inp != previous_carry ]
-                unique_wire = list(set(not_carry_wires))
+                # print(f"After XOR wire: {x_xor_y}")
+                # print(f"Previous carry: {previous_carry}")
+                # print(f"Previous carry gates: {b}")
+                unique_wire = list(set(inp for g in b for inp in g.inputs if inp != previous_carry))
                 assert_or_exception(len(unique_wire) == 1, "There should be only one unique wire")
-                gates.perform_swap(previous_carry, unique_wire[0])
-                a_xor_y = unique_wire[0]
-                gates_after_xor = gates.get_common_gates_with_inputs([a_xor_y, previous_carry])
+                gates.perform_swap(x_xor_y, unique_wire[0])
+                x_xor_y = unique_wire[0]
+                gates_after_xor = gates.get_common_gates_with_inputs([x_xor_y, previous_carry])
+            else:
+                raise Exception(f"After xor there should be 2 gates, got {len(gates_after_xor)}")
 
         assert_or_exception(len(gates_after_xor) == 2, "After xor there should be 2 gates")
         assert_or_exception(isinstance(gates_after_xor[0], AndGate), "After xor there should be an and")
         assert_or_exception(isinstance(gates_after_xor[1], XorGate), "After xor there should be an xor")
         
-        assert_or_change(gates_after_xor[1].output == this_z_wire, f"The output of the xor should be {this_z_wire}")
+        if gates_after_xor[1].output != this_z_wire:
+            gates.perform_swap(gates_after_xor[1].output, this_z_wire)
 
+        x_and_y = common_gates[0].output
         and_gate_after_xor = gates_after_xor[0]
-        after_ands = gates.get_common_gates_with_inputs([a_and_y, and_gate_after_xor.output])
-        if len(after_ands) != 1:
-            a = gates.gates_by_input[a_and_y]
-            b = gates.gates_by_input[gates_after_xor[0].output]
-            print(a, b, after_ands)
+        after_ands = gates.get_common_gates_with_inputs([x_and_y, and_gate_after_xor.output])
         assert_or_exception(len(after_ands) == 1, "After the ands there should be 1 gate")
         assert_or_exception(isinstance(after_ands[0], OrGate), "After the ands there should be an or")
 
         previous_carry = after_ands[0].output
 
-    
-        
+    all_wires_swapped = sorted([ wire for swap in gates.did_swaps for wire in swap ])
+    swapped_wires_str = ",".join(all_wires_swapped)
+    return swapped_wires_str
 
 
-    
+submit_result_day(24, 1, solve_part_1())
 
-
-
-# submit_result_day(24, 1, solve_part_1())
-
-print(solve_part_2())
+submit_result_day(24, 2, solve_part_2(), allow_non_numeric=True)
 
